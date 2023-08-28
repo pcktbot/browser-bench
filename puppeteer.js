@@ -1,6 +1,12 @@
 const puppeteer = require('puppeteer');
-const fs = require('fs');
-const path = require('path');
+// const fs = require('fs');
+// const path = require('path');
+
+/**
+ * input#Username
+ * button[type="submit"]
+ * 
+ */
 
 class Crawler {
   constructor (params) {
@@ -17,13 +23,16 @@ class Crawler {
   set failed (value) { this._failed.push(value); }
 
   async run (creds) {
-    for (let cred of creds) {
+    for (const cred of creds) {
       await this.openBrowser();
       await this.openPage();
       await this.navigateTo(cred.entrypoint);
       await this.login(cred);
+      await this.waitForNavigation();
+      await this.sortResult();
       await this.closePage();
       await this.closeBrowser();
+      this.surfaceResults();
     }
   }
 
@@ -38,12 +47,31 @@ class Crawler {
  async navigateTo (entrypoint) {
     await this.page.goto(entrypoint);
   }
+
+  async waitForNavigation () {
+    await this.page.waitForNavigation();
+  }
+
+  async sortResult () {}
   
-  async closePage () {}
+  async closePage () {
+    await this.page.close();
+  }
 
-  async closeBrowser () {}
+  async closeBrowser () {
+    await this.browser.close();
+  }
 
-  async login () {}
+  async login () {
+    // should we store the CSS selector for the login markup in a separate config?
+  }
+
+  surfaceResults () {
+    return {
+      suceeded: this.suceeded,
+      failed: this.failed
+    }
+  }
 
 }
 
