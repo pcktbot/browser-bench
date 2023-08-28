@@ -12,7 +12,12 @@ class Crawler {
   constructor (params) {
     this.browser = null;
     this.page = null;
-    this.config = {};
+    this.config = {
+      args: ["--no-sandbox", "--enable-gpu"],
+      headless: false,
+      ignoreHTTPSErrors: true,
+      waitUntil: "networkidle2"
+    };
     this._suceeded = [];
     this._failed = [];
   }
@@ -24,41 +29,48 @@ class Crawler {
 
   async run (creds) {
     for (const cred of creds) {
-      await this.openBrowser();
+      await this.openBrowser(this.config);
       await this.openPage();
-      await this.navigateTo(cred.entrypoint);
-      await this.login(cred);
-      await this.waitForNavigation();
-      await this.sortResult();
+      // await this.navigateTo(cred.entrypoint);
+      // await this.login(cred);
+      // await this.waitForNavigation();
+      // await this.sortResult();
       await this.closePage();
       await this.closeBrowser();
-      this.surfaceResults();
+      // this.surfaceResults();
+      return "finished"
     }
   }
 
   async openBrowser () {
-    this.browser = await puppeteer.launch(this.config);
+    console.log('opening browser');
+    this.browser = await puppeteer.launch({ headless: false });
   }
 
   async openPage () {
+    console.log('opening page');
     this.page = await this.browser.newPage();
   }
 
  async navigateTo (entrypoint) {
+    console.log('navigating to entrypoint', entrypoint);
     await this.page.goto(entrypoint);
   }
 
   async waitForNavigation () {
+    console.log('waiting for navigation');
     await this.page.waitForNavigation();
   }
 
   async sortResult () {}
   
   async closePage () {
+    console.log('closing page');
     await this.page.close();
   }
 
   async closeBrowser () {
+    console.log('closing browser');
     await this.browser.close();
   }
 
