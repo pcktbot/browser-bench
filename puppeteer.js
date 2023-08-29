@@ -1,43 +1,41 @@
 const puppeteer = require('puppeteer');
-// const fs = require('fs');
-// const path = require('path');
-
-/**
- * input#Username
- * button[type="submit"]
- * 
- */
 
 class Crawler {
   constructor (params) {
     this.browser = null;
     this.page = null;
-    this.config = {};
-    this._suceeded = [];
+    this.config = {
+      args: ["--no-sandbox", "--enable-gpu"],
+      headless: false,
+      ignoreHTTPSErrors: true,
+      waitUntil: "networkidle2"
+    };
+    this._succeeded = [];
     this._failed = [];
   }
 
-  get suceeded () { return this._suceeded; }
-  set suceeded (value) { this._suceeded.push(value); }
+  get succeeded () { return this._succeeded; }
+  set succeeded (value) { this._succeeded.push(value); }
   get failed () { return this._failed; }
   set failed (value) { this._failed.push(value); }
 
   async run (creds) {
     for (const cred of creds) {
-      await this.openBrowser();
+      console.info(`Testing ${cred.description}...`);
+      await this.openBrowser(this.config);
       await this.openPage();
       await this.navigateTo(cred.entrypoint);
       await this.login(cred);
-      await this.waitForNavigation();
-      await this.sortResult();
+      // any issues here are probably password related, and this user needs to be skipped
+      await this.sortResult(cred);
       await this.closePage();
       await this.closeBrowser();
-      this.surfaceResults();
     }
+    return this.surfaceResults();
   }
 
-  async openBrowser () {
-    this.browser = await puppeteer.launch(this.config);
+  async openBrowser (config = this.config) {
+    this.browser = await puppeteer.launch(config);
   }
 
   async openPage () {
@@ -45,14 +43,24 @@ class Crawler {
   }
 
  async navigateTo (entrypoint) {
-    await this.page.goto(entrypoint);
+    await this.page.goto(entrypoint, { timeout: 0 });
   }
 
   async waitForNavigation () {
     await this.page.waitForNavigation();
   }
 
-  async sortResult () {}
+  async sortResult (cred) {
+    const url = this.page.url();
+    cred.result_url = url;
+    if (cred.should_have_access && cred.entrypoint === url) {
+      this.succeeded = cred;
+    } else if (!cred.should_have_access && cred.entrypoint !== url) {
+      this.succeeded = cred;
+    } else {
+      this.failed = cred;
+    }
+  }
   
   async closePage () {
     await this.page.close();
@@ -62,13 +70,19 @@ class Crawler {
     await this.browser.close();
   }
 
-  async login () {
+  async login (cred) {
     // should we store the CSS selector for the login markup in a separate config?
+    await this.page.locator("input#Username").fill(cred.username);
+    this.page.click("button[type='submit']");
+    await this.waitForNavigation();
+    await this.page.locator("input#Password").fill(cred.password);
+    this.page.click("button[type='submit']");
+    await this.waitForNavigation();
   }
 
   surfaceResults () {
     return {
-      suceeded: this.suceeded,
+      succeeded: this.succeeded,
       failed: this.failed
     }
   }
