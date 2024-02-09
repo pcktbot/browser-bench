@@ -1,13 +1,10 @@
 const puppeteer = require('puppeteer');
-// const fs = require('fs');
-// const path = require('path');
 
 /**
  * input#Username
  * button[type="submit"]
  * 
  */
-
 class Crawler {
   constructor (params) {
     this.browser = null;
